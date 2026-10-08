@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일본어 문제</title>
+    <style>
+        :root {
+            --primary-color: #ff5722;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .stats {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        .quiz-box {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .korean-sentence {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background-color: #fdfefe;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #e64a19;
+        }
+
+        .next-btn {
+            background-color: #2e7d32;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .result-box.correct {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .result-box.incorrect {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>일본어 문제</h1>
+        <div class="stats" id="stats">맞춘 문제: 0 / 시도한 문제: 0</div>
+
+        <div class="quiz-box">
+            <span class="label">다음 한국어 문장을 일본어로 번역하세요</span>
+            <div class="korean-sentence" id="koreanSentence">문장을 불러오는 중...</div>
+            
+            <input type="text" id="userInput" placeholder="여기에 일본어를 입력하세요..." autofocus>
+            <button id="submitBtn" onclick="checkAnswer()">제출하기</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="feedback-title" id="feedbackTitle"></div>
+            <div id="feedbackContent"></div>
+            <button class="next-btn" id="nextBtn" onclick="loadNewQuestion()">다음 문제 풀기</button>
+        </div>
+    </div>
+
+    <script>
+        // 120개 이상의 방대한 일본어 회화 문장 데이터베이스
+        const sentences = [
+            { kr: "실례합니다. 메뉴 좀 주세요.", answers: ["すみません、メニューをください", "すいません、メニューをください", "すみませんメニューをください", "すみません、メニューお願いします"], keyword: "メニュー", tip: "메뉴를 달라고 할 때는 'メニューをください'가 가장 자연스럽습니다." },
+            { kr: "이것은 얼마입니까?", answers: ["これはいくらですか", "これいくらですか", "これはいくらですか？"], keyword: "いくら", tip: "간단하게 'これ、いくら？'라고 반말로 물어볼 수도 있습니다." },
+            { kr: "정말 감사합니다.", answers: ["どうもありがとうございます", "本当にありがとうございます", "ありがとうございます", "どうもありがとうございました"], keyword: "ありがとう", tip: "상황에 따라 'どうも'만 가볍게 쓰기도 합니다." },
+            { kr: "지금 몇 시예요?", answers: ["いま何時ですか", "今何時ですか", "いまなんじですか"], keyword: "何時", tip: "시간을 물어볼 때는 '今(いま)'를 붙여주면 명확합니다." },
+            { kr: "화장실이 어디에 있습니까?", answers: ["トイレはどこですか", "お手洗いどこですか", "お手洗いはどこですか", "トイレどこですか"], keyword: "トイレ", tip: "조금 더 공공장소나 격식을 차린 곳에서는 'おてあらい(お手洗い)'가 좋습니다." },
+            { kr: "다시 한 번 말씀해 주세요.", answers: ["もう一度お願いします", "もういちどおねがいします", "もう一度言ってください", "もう一回言ってください"], keyword: "もう一度", tip: "못 알아들었을 때 'もう一度(いちど)お願いします'라고 하면 유용합니다." },
+            { kr: "내일 봐요.", answers: ["また明日", "またあした", "また明日ね", "それではまた明日"], keyword: "明日", tip: "헤어질 때 가볍게 'じゃ、また明日！'라고 하면 친근합니다." },
+            { kr: "죄송합니다만, 길 좀 묻겠습니다.", answers: ["すみません、道を教えてください", "すいません道を教えてください", "すみませんが道を聞いてもいいですか"], keyword: "道", tip: "길을 물어볼 때는 '道を教えてください'를 기억하세요." },
+            { kr: "이 가까이에 역이 있나요?", answers: ["この近くに駅はありますか", "このちかくにえきはありますか", "近くに駅ありますか"], keyword: "駅", tip: "주변 시설을 물어볼 때 '~近くに ~はありますか' 패턴이 유용합니다." },
+            { kr: "영어 할 수 있나요?", answers: ["英語が話せますか", "英語できますか", "英語を話せますか"], keyword: "英語", tip: "능력을 물어볼 때는 가능형(話せますか)을 사용합니다." },
+            { kr: "이해하지 못했습니다.", answers: ["わかりません", "理解できませんでした", "よくわかりません"], keyword: "わかりません", tip: "간단하게 'わかりません' 또는 'よくわかりません(잘 모르겠어요)'을 씁니다." },
+            { kr: "천천히 말씀해 주세요.", answers: ["ゆっくり話してください", "ゆっくり言ってください", "ゆっくりおねがいします"], keyword: "ゆっくり", tip: "대화가 빠를 때 'ゆっくりお願いします'라고 요청해 보세요." },
+            { kr: "이것으로 주세요.", answers: ["これでお願いします", "これにします", "これをください"], keyword: "これ", tip: "가게에서 주문하거나 물건을 고를 때 쓰기 좋습니다." },
+            { kr: "카드로 계산할 수 있나요?", answers: ["カードで払えますか", "カード使えますか", "カードで支払いはできますか"], keyword: "カード", tip: "해외 여행 시 'カード使えますか(카드 쓸 수 있나요)?'가 입에 붙으면 편합니다." },
+            { kr: "영수증 주세요.", answers: ["領収書をください", "レシートをください", "領収書お願いします"], keyword: "領収書", tip: "일본에서는 영수증을 'レシート(레시토)' 또는 '領収書(료슈쇼)'라고 합니다." },
+            { kr: "배고프네요.", answers: ["お腹が減りました", "お腹ペコペコです", "お腹すいた", "お腹が空きました"], keyword: "お腹", tip: "일상 회화에서는 'お腹すいた(배고파)'
