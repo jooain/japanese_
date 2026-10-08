@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일본어 문제</title>
+    <style>
+        :root {
+            --primary-color: #ff5722;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .stats {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        .quiz-box {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .korean-sentence {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background-color: #fdfefe;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #e64a19;
+        }
+
+        .next-btn {
+            background-color: #2e7d32;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .result-box.correct {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .result-box.incorrect {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>일본어 문제</h1>
+        <div class="stats" id="stats">맞춘 문제: 0 / 시도한 문제: 0</div>
+
+        <div class="quiz-box">
+            <span class="label">다음 한국어 문장을 일본어로 번역하세요</span>
+            <div class="korean-sentence" id="koreanSentence">문장을 불러오는 중...</div>
+            
+            <input type="text" id="userInput" placeholder="여기에 일본어를 입력하세요..." autofocus>
+            <button id="submitBtn" onclick="checkAnswer()">제출하기</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="feedback-title" id="feedbackTitle"></div>
+            <div id="feedbackContent"></div>
+            <button class="next-btn" id="nextBtn" onclick="loadNewQuestion()">다음 문제 풀기</button>
+        </div>
+    </div>
+
+    <script>
+        const sentences = [
+            { kr: "실례합니다. 메뉴 좀 주세요.", answers: ["すみません、メニューをください", "すいません、メニューをください"], keyword: "メニュー", tip: "메뉴를 달라고 할 때는 'メニューをください'가 가장 자연스럽습니다." },
+            { kr: "이것은 얼마입니까?", answers: ["これはいくらですか", "これいくらですか"], keyword: "いくら", tip: "간단하게 'これ、いくら？'라고 반말로 물어볼 수도 있습니다." },
+            { kr: "정말 감사합니다.", answers: ["どうもありがとうございます", "本当にありがとうございます", "ありがとうございます"], keyword: "ありがとう", tip: "상황에 따라 'どうも'만 가볍게 쓰기도 합니다." },
+            { kr: "지금 몇 시예요?", answers: ["いま何時ですか", "今何時ですか"], keyword: "何時", tip: "시간을 물어볼 때는 '今(いま)'를 붙여주면 명확합니다." },
+            { kr: "화장실이 어디에 있습니까?", answers: ["トイレはどこですか", "お手洗いはどこですか"], keyword: "トイレ", tip: "공공장소나 격식을 차린 곳에서는 'おてあらい'가 좋습니다." },
+            { kr: "다시 한 번 말씀해 주세요.", answers: ["もう一度お願いします", "もう一度言ってください"], keyword: "もう一度", tip: "못 알아들었을 때 유용한 표현입니다." },
+            { kr: "내일 봐요.", answers: ["また明日", "また明日ね"], keyword: "明日", tip: "헤어질 때 가볍게 쓰기 좋습니다." },
+            { kr: "죄송합니다만, 길 좀 묻겠습니다.", answers: ["すみません、道を教えてください"], keyword: "道", tip: "길을 물어볼 때 쓰는 정석 표현입니다." },
+            { kr: "이 가까이에 역이 있나요?", answers: ["この近くに駅はありますか"], keyword: "駅", tip: "~近くに ~はありますか 패턴을 기억하세요." },
+            { kr: "영어 할 수 있나요?", answers: ["英語が話せますか", "英語できますか"], keyword: "英語", tip: "가능형(話せますか)을 사용합니다." },
+            { kr: "이해하지 못했습니다.", answers: ["わかりません", "よくわかりません"], keyword: "わかりません", tip: "잘 모르겠다고 할 때 씁니다." },
+            { kr: "천천히 말씀해 주세요.", answers: ["ゆっくり話してください", "ゆっくり言ってください"], keyword: "ゆっくり", tip: "말이 빠를 때 요청하는 표현입니다." },
+            { kr: "이것으로 주세요.", answers: ["これでお願いします", "これをください"], keyword: "これ", tip: "가게에서 주문할 때 쓰기 좋습니다." },
+            { kr: "카드로 계산할 수 있나요?", answers: ["カードで払えますか", "カード使えますか"], keyword: "カード", tip: "카드가 되냐고 물어볼 때 씁니다." },
+            { kr: "영수증 주세요.", answers: ["領収書をください", "レシートをください"], keyword: "領収書", tip: "레시토 또는 료슈쇼를 쓰세요." },
+            { kr: "배고프네요.", answers: ["お腹が減りました", "お腹すいた"], keyword: "お腹", tip: "일상 회화에서 자주 씁니다." },
+            { kr: "목마르네요.", answers: ["喉が渇きました", "喉渇いた"], keyword: "喉", tip: "갈증이 날 때 씁니다." },
+            { kr: "맛있어요!", answers: ["美味しいです", "おいしいです"], keyword: "美味しい", tip: "음식이 입에 맞을 때 표현합니다." },
+            { kr: "계산해주세요.", answers: ["お会計お願いします", "会計お願いします"], keyword: "会計", tip: "계산을 요청합니다." },
+            { kr: "잠시만요.", answers: ["ちょっと待ってください", "少々お待ちください"], keyword: "待って", tip: "기다려 달라고 할 때 씁니다." },
+            { kr: "괜찮습니다.", answers: ["大丈夫です"], keyword: "大丈夫", tip: "만능으로 쓰이는 표현입니다." },
+            { kr: "죄송합니다.", answers: ["すみません", "ごめんなさい"], keyword: "すみません", tip: "사과나 부를 때 모두 씁니다." },
+            { kr: "처음 뵙겠습니다.", answers: ["はじめまして"], keyword: "はじめまして", tip: "첫인사 표현입니다." },
+            { kr: "잘 부탁드립니다.", answers: ["よろしくお願いします", "どうぞよろしくお願いします"], keyword: "よろしく", tip: "인사 마무리 필수 표현입니다." },
+            { kr: "어제는 즐거웠습니다.", answers: ["昨日は楽しかったです"], keyword: "楽しかった", tip: "과거 소감을 말합니다." },
+            { kr: "날씨가 좋네요.", answers: ["いい天気ですね"], keyword: "天気", tip: "스몰토크 주제입니다." },
+            { kr: "비가 오네요.", answers: ["雨が降っていますね", "雨ですね"], keyword: "雨", tip: "날씨 표현입니다." },
+            { kr: "나중에 봐요.", answers: ["またあとで", "後でね"], keyword: "後で", tip: "다음에 보자는 인사입니다." },
+            { kr: "조심히 가세요.", answers: ["気をつけて", "気をつけて帰ってください"], keyword: "気をつけて", tip: "안전을 빌어주는 인사입니다." },
+            { kr: "잘 다녀오세요.", answers: ["いってらっしゃい"], keyword: "いってらっしゃい", tip: "나가는 사람에게 씁니다." },
+            { kr: "다녀왔습니다.", answers: ["ただいま"], keyword: "ただいま", tip: "귀가 인사입니다." },
+            { kr: "환영합니다.", answers: ["いらっしゃいませ", "ようこそ"], keyword: "いらっしゃいませ", tip: "환영 인사입니다." },
+            { kr: "무엇을 도와드릴까요?", answers: ["何かお手伝いしましょうか"], keyword: "お手伝い", tip: "도움을 줄 때 씁니다." },
+            { kr: "예약을 했습니다.", answers: ["予約をしました"], keyword: "予約", tip: "예약 완료를 알립니다." },
+            { kr: "추워요.", answers: ["寒いです", "さむいです"], keyword: "寒", tip: "추울 때 씁니다." },
+            { kr: "더워요.", answers: ["暑いです", "あついです"], keyword: "暑い", tip: "더울 때 씁니다." },
+            { kr: "피곤해요.", answers: ["疲れました", "疲れた"], keyword: "疲れた", tip: "피곤할 때 씁니다." },
+            { kr: "잠을 잘 못 잤어요.", answers: ["あまり眠れませんでした"], keyword: "眠れ", tip: "수면 부족을 말합니다." },
+            { kr: "기분이 좋아요.", answers: ["気分がいいです"], keyword: "気分", tip: "기분 상태를 말합니다." },
+            { kr: "축하합니다!", answers: ["おめでとうございます", "おめでとう！"], keyword: "おめでとう", tip: "축하 인사입니다." },
+            { kr: "어디로 가십니까?", answers: ["どこに行きますか"], keyword: "どこ", tip: "행선지를 묻습니다." },
+            { kr: "여권을 잃어버렸습니다.", answers: ["パスポートをなくしました"], keyword: "パスポート", tip: "분실 신고 시 씁니다." },
+            { kr: "경찰을 불러주세요.", answers: ["警察を呼んでください"], keyword: "警察", tip: "긴급 상황 시 씁니다." },
+            { kr: "병원에 가야 합니다.", answers: ["病院に行かなければなりません"], keyword: "病院", tip: "병원 방문을 말합니다." },
+            { kr: "머리가 아픕니다.", answers: ["頭が痛いです"], keyword: "頭", tip: "통증 부위를 말합니다." },
+            { kr: "열이 납니다.", answers: ["熱があります"], keyword: "熱", tip: "증상을 말합니다." },
+            { kr: "약국은 어디에 있습니까?", answers: ["薬局はどこですか"], keyword: "薬局", tip: "약국을 찾습니다." },
+            { kr: "이것은 무엇입니까?", answers: ["これは何ですか", "これはなんですか"], keyword: "何", tip: "사물의 이름을 묻습니다." },
+            { kr: "시간이 없습니다.", answers: ["時間がありません"], keyword: "時間", tip: "시간 부족을 알립니다." },
+            { kr: "조금 기다려 주세요.", answers: ["少し待ってください", "ちょっと待って"], keyword: "少し", tip: "여유를 부탁합니다." },
+            { kr: "다 끝났습니다.", answers: ["終わりました", "全部終わりました"], keyword: "終わり", tip: "완료를 알립니다." },
+            { kr: "시작합시다.", answers: ["始めましょう"], keyword: "始め", tip: "시작을 알립니다." },
+            { kr: "정답입니다.", answers: ["正解です"], keyword: "正解", tip: "맞았을 때 씁니다." },
+            { kr: "틀렸습니다.", answers: ["間違いです", "違います"], keyword: "違い", tip: "아닐 때 씁니다." },
+            { kr: "알겠습니다.", answers: ["わかりました", "分かりました"], keyword: "分かっ", tip: "이해를 뜻합니다." },
+            { kr: "모릅니다.", answers: ["知りません", "わかりません"], keyword: "知ら", tip: "모름을 뜻합니다." },
+            { kr: "기억나요?", answers: ["覚えてますか"], keyword: "覚え", tip: "기억을 묻습니다." },
+            { kr: "잊어버렸어요.", answers: ["忘れました"], keyword: "忘れ", tip: "깜빡했을 때 씁니다." },
+            { kr: "약속이 있습니다.", answers: ["約束があります"], keyword: "約束", tip: "선약을 말합니다." },
+            { kr: "취소할 수 있나요?", answers: ["キャンセルできますか"], keyword: "キャンセル", tip: "취소를 문의합니다." },
+            { kr: "변경할 수 있나요?", answers: ["変更できますか"], keyword: "変更", tip: "변경을 문의합니다." },
+            { kr: "여기에 적어주세요.", answers: ["ここに書いてください"], keyword: "書いて", tip: "메모를 부탁합니다." },
+            { kr: "이름이 무엇입니까?", answers: ["お名前は何ですか"], keyword: "名前", tip: "성함을 묻습니다." },
+            { kr: "저는 한국인입니다.", answers: ["私は韓国人です"], keyword: "韓国人", tip: "국적을 말합니다." },
+            { kr: "일본어를 조금 합니다.", answers: ["日本語が少し話せます"], keyword: "日本語", tip: "회화 실력을 겸손하게 말합니다." },
+            { kr: "만나서 반갑습니다.", answers: ["お会いできて嬉しいです"], keyword: "嬉しい", tip: "만남의 기쁨을 말합니다." },
+            { kr: "또 만나요.", answers: ["また会いましょう"], keyword: "また", tip: "재회를 기약합니다." },
+            { kr: "조용히 해주세요.", answers: ["静かにしてください"], keyword: "静か", tip: "정숙을 요구합니다." },
+            { kr: "사진을 찍어도 되나요?", answers: ["写真を撮ってもいいですか"], keyword: "写真", tip: "촬영 허락을 구합니다." },
+            { kr: "여기에 앉아도 되나요?", answers: ["ここに座ってもいいですか"], keyword: "座って", tip: "착석 허락을 구합니다." },
+            { kr: "담배를 피워도 되나요?", answers: ["タバコを吸ってもいいですか"], keyword: "タバコ", tip: "흡연 여부를 묻습니다." },
+            { kr: "Wi-Fi 되나요?", answers: ["Wi-Fiはありますか", "ワイファイ使えますか"], keyword: "Wi-Fi", tip: "와이파이를 찾습니다." },
+            { kr: "비밀번호가 뭔가요?", answers: ["パスワードは何ですか"], keyword: "パスワード", tip: "비번을 묻습니다." },
+            { kr: "배터리가 없어요.", answers: ["バッテリーがありません"], keyword: "バッテリー", tip: "배터리 부족을 알립니다." },
+            { kr: "충전할 수 있나요?", answers: ["充電できますか"], keyword: "充電", tip: "충전을 문의합니다." },
+            { kr: "가방을 잃어버렸어요.", answers: ["カバンをなくしました"], keyword: "カバン", tip: "물건 분실을 알립니다." },
+            { kr: "지갑을 분실했습니다.", answers: ["財布をなくしました"], keyword: "財布", tip: "지갑 분실 시 씁니다." },
+            { kr: "우산이 없습니다.", answers: ["傘がありません"], keyword: "傘", tip: "우산이 없을 때 씁니다." },
+            { kr: "가게 문을 닫았네요.", answers: ["店が閉まっていますね"], keyword: "店", tip: "영업 종료를 봅니다." },
+            { kr: "지금 영업 중인가요?", answers: ["今営業していますか"], keyword: "営業", tip: "영업 여부를 묻습니다." },
+            { kr: "몇 시에 문을 닫습니까?", answers: ["何時に閉まりますか"], keyword: "何時", tip: "마감 시간을 묻습니다." },
+            { kr: "추천 메뉴가 뭔가요?", answers: ["おすすめは何ですか"], keyword: "おすすめ", tip: "추천을 받습니다." },
+            { kr: "이건 어떤 맛인가요?", answers: ["どんな味ですか"], keyword: "味", tip: "맛을 물어봅니다." },
+            { kr: "매운가요?", answers: ["辛いですか"], keyword: "辛い", tip: "매운지 확인합니다." },
+            { kr: "달달하네요.", answers: ["甘いですね"], keyword: "甘い", tip: "단맛을 표현합니다." },
+            { kr: "짜요.", answers: ["しょっぱいです"], keyword: "しょっぱい", tip: "짠맛을 표현합니다." },
+            { kr: "싱거워요.", answers: ["味が薄いです"], keyword: "薄い", tip: "싱거운 맛을 표현합니다." },
+            { kr: "물 좀 주시겠어요?", answers: ["お水をもらえますか"], keyword: "水", tip: "물을 요청합니다." },
+            { kr: "앞치마 주세요.", answers: ["エプロンをください"], keyword: "エプロン", tip: "앞치마를 요청합니다." },
+            { kr: "물티슈 주세요.", answers: ["おしぼりをください"], keyword: "おしぼり", tip: "물티슈를 요청합니다." },
+            { kr: "젓가락을 떨어뜨렸어요.", answers: ["箸を落としました"], keyword: "箸", tip: "도구 낙하 시 씁니다." },
+            { kr: "포크 있나요?", answers: ["フォークはありますか"], keyword: "フォーク", tip: "포크를 요청합니다." },
+            { kr: "맛있게 잘 먹었습니다.", answers: ["ごちそうさまでした"], keyword: "ごちそうさまでした", tip: "식사 후 인사입니다." },
+            { kr: "조심히 들어가세요.", answers: ["気をつけてお帰りください"], keyword: "気をつけて", tip: "귀가 안전을 빕니다." },
+            { kr: "다음에 또 뵙겠습니다.", answers: ["また今度会いましょう"], keyword: "また", tip: "다음 만남을 기약합니다." },
+            { kr: "연락주세요.", answers: ["連絡してください"], keyword: "連絡", tip: "연락을 부탁합니다." },
+            { kr: "전화번호가 어떻게 되나요?", answers: ["電話番号は何番ですか"], keyword: "電話番号", tip: "번호를 묻습니다." },
+            { kr: "메일 주소를 알려주세요.", answers: ["メールアドレスを教えてください"], keyword: "メール", tip: "메일 주소를 묻습니다." },
+            { kr: "축하해요!", answers: ["おめでとう！"], keyword: "おめでとう", tip: "축하를 전합니다." },
+            { kr: "힘내세요!", answers: ["頑張ってください"], keyword: "頑張って", tip: "응원합니다." },
+            { kr: "수고하셨습니다.", answers: ["お疲れ様でした"], keyword: "お疲れ様", tip: "수고 인사입니다." },
+            { kr: "어떻게 지내세요?", answers: ["お元気ですか"], keyword: "元気", tip: "안부를 묻습니다." },
+            { kr: "좋은 하루 되세요.", answers: ["良い一日を"], keyword: "一日", tip: "하루의 행운을 빕니다." },
+            { kr: "조심하세요.", answers: ["気をつけて"], keyword: "注意", tip: "주의를 당부합니다." },
+            { kr: "괜찮아요?", answers: ["大丈夫ですか"], keyword: "大丈夫", tip: "상태를 살핍니다." },
+            { kr: "제가 할게요.", answers: ["私がやります"], keyword: "私", tip: "자원할 때 씁니다." },
+            { kr: "도와주세요.", answers: ["助けてください"], keyword: "助けて", tip: "도움을 청합니다." },
+            { kr: "무슨 일이에요?", answers: ["どうしましたか"], keyword: "どう", tip: "이유를 묻습니다." },
+            { kr: "별거 아닙니다.", answers: ["何でもないです"], keyword: "何でも", tip: "대수롭지 않게 넘깁니다." },
+            { kr: "믿을 수 없어요.", answers: ["信じられない"], keyword: "信じ", tip: "놀라움을 표현합니다." },
+            { kr: "정말이에요?", answers: ["本当ですか"], keyword: "本当", tip: "사실 여부를 묻습니다." },
+            { kr: "그렇군요.", answers: ["そうなんですね", "なるほど"], keyword: "そう", tip: "수긍할 때 씁니다." },
+            { kr: "아닙니다.", answers: ["違います", "いいえ"], keyword: "違う", tip: "부정할 때 씁니다." },
+            { kr: "좋아요!", answers: ["いいですね"], keyword: "良い", tip: "동의할 때 씁니다." },
+            { kr: "싫어요.", answers: ["嫌です"], keyword: "嫌", tip: "거부할 때 씁니다." },
+            { kr: "나중에 얘기해요.", answers: ["あとで話しましょう"], keyword: "後で", tip: "나중을 기약합니다." },
+            { kr: "먼저 가세요.", answers: ["先にどうぞ", "お先に"], keyword: "先", tip: "양보할 때 씁니다." },
+            { kr: "실례하겠습니다.", answers: ["失礼します"], keyword: "失礼", tip: "인사할 때 씁니다." },
+            { kr: "오랜만입니다.", answers: ["お久しぶりです"], keyword: "久しぶり", tip: "오랜만인 인사입니다." },
+            { kr: "잘 지내셨죠?", answers: ["お元気でしたか"], keyword: "元気", tip: "안부를 묻습니다." }
+        ];
+
+        let currentIndex = 0;
+        let correctCount = 0;
+        let totalCount = 0;
+        let isAnswered = false;
+
+        function loadNewQuestion() {
+            isAnswered = false;
+            currentIndex = Math.floor(Math.random() * sentences.length);
+            const sentenceEl = document.getElementById("koreanSentence");
+            if (sentenceEl) {
+                sentenceEl.innerText = sentences[currentIndex].kr;
+            }
+            const inputEl = document.getElementById("userInput");
+            if (inputEl) {
+                inputEl.value = "";
+                inputEl.disabled = false;
+                inputEl.focus();
+            }
+            const submitBtn = document.getElementById("submitBtn");
+            if (submitBtn) {
+                submitBtn.style.display = "block";
+            }
+            const resultBox = document.getElementById("resultBox");
+            if (resultBox) {
+                resultBox.style.display = "none";
+            }
+        }
+
+        function checkAnswer() {
+            if (isAnswered) return;
+
+            const inputEl = document.getElementById("userInput");
+            const userText = inputEl ? inputEl.value.trim() : "";
+            
+            if (!userText) {
+                alert("답안을 입력해주세요!");
+                if (inputEl) inputEl.focus();
+                return;
+            }
+
+            totalCount++;
+            const currentData = sentences[currentIndex];
+            const cleanUserText = userText.replace(/[\s！？?.,]/g, "");
+            
+            let isCorrect = false;
+            let isNatural = true;
+
+            for (let ans of currentData.answers) {
+                const cleanAns = ans.replace(/[\s！？?.,]/g, "");
+                if (cleanUserText === cleanAns) {
+                    isCorrect = true;
+                    break;
+                }
+            }
+
+            if (!isCorrect && cleanUserText.includes(currentData.keyword)) {
+                isCorrect = true;
+                isNatural = false;
+            }
+
+            const resultBox = document.getElementById("resultBox");
+            const feedbackTitle = document.getElementById("feedbackTitle");
+            const feedbackContent = document.getElementById("feedbackContent");
+            const nextBtn = document.getElementById("nextBtn");
+
+            if (resultBox) resultBox.style.display = "block";
+
+            if (isCorrect) {
+                isAnswered = true;
+                correctCount++;
+                
+                if (inputEl) inputEl.disabled = true;
+                const submitBtn = document.getElementById("submitBtn");
+                if (submitBtn) submitBtn.style.display = "none";
+                if (nextBtn) nextBtn.style.display = "block";
+
+                if (isNatural) {
+                    if (feedbackTitle) feedbackTitle.innerText = "정답입니다! 🎉";
+                    if (feedbackContent) feedbackContent.innerHTML = `완벽한 표현입니다. 원어민들이 자주 쓰는 자연스러운 문장이에요!`;
+                } else {
+                    if (feedbackTitle) feedbackTitle.innerText = "정답 처리되었습니다! 👍 (조금 어색한 부분 있음)";
+                    if (feedbackContent) feedbackContent.innerHTML = `의미는 통하지만 다음과 같이 표현하면 더 자연스러워요:<br><strong>추천 표현:</strong> ${currentData.answers[0]}<br><small>💡 ${currentData.tip}</small>`;
+                }
+                if (resultBox) resultBox.className = "result-box correct";
+            } else {
+                if (feedbackTitle) feedbackTitle.innerText = "틀렸습니다 🥲";
+                if (feedbackContent) feedbackContent.innerHTML = `다시 시도해 보세요!<br><strong>모범 답안:</strong> ${currentData.answers[0]}<br><small>💡 ${currentData.tip}</small>`;
+                if (resultBox) resultBox.className = "result-box incorrect";
+                if (nextBtn) nextBtn.style.display = "none";
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            const statsEl = document.getElementById("stats");
+            if (statsEl) {
+                statsEl.innerText = `맞춘 문제: ${correctCount} / 시도한 문제: ${totalCount}`;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const inputEl = document.getElementById("userInput");
+            if (inputEl) {
+                inputEl.addEventListener("keypress", function(event) {
+                    if (event.key === "Enter") {
+                        if (!isAnswered) {
+                            checkAnswer();
+                        }
+                    }
+                });
+            }
+            loadNewQuestion();
+        });
+    </script>
+</body>
+</html>
