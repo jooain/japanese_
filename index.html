@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일본어 문제</title>
+    <style>
+        :root {
+            --primary-color: #ff5722;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .stats {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        .quiz-box {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .japanese-sentence {
+            font-size: 1.4rem;
+            font-weight: 600;
+            background-color: #fdfefe;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #e64a19;
+        }
+
+        .next-btn {
+            background-color: #2e7d32;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .result-box.correct {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .result-box.incorrect {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>일본어 문제</h1>
+        <div class="stats" id="stats">맞춘 문제: 0 / 시도한 문제: 0</div>
+
+        <div class="quiz-box">
+            <span class="label">다음 일본어 문장의 한국어 뜻을 입력하세요</span>
+            <div class="japanese-sentence" id="japaneseSentence">문장을 불러오는 중...</div>
+            
+            <input type="text" id="userInput" placeholder="여기에 한국어 뜻을 입력하세요..." autofocus>
+            <button id="submitBtn" onclick="checkAnswer()">제출하기</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="feedback-title" id="feedbackTitle"></div>
+            <div id="feedbackContent"></div>
+            <button class="next-btn" id="nextBtn" onclick="loadNewQuestion()">다음 문제 풀기</button>
+        </div>
+    </div>
+
+    <script>
+        // 일본어 문장과 정답(한국어 뜻) 데이터베이스
+        const sentences = [
+            { jp: "すみません、メニューをください", answers: ["실례합니다 메뉴 좀 주세요", "실례합니다. 메뉴 좀 주세요", "저기요 메뉴 주세요"], tip: "메뉴를 달라고 요청하는 정중한 표현입니다." },
+            { jp: "これはいくらですか", answers: ["이것은 얼마입니까", "이거 얼마예요", "이것은 얼마예요"], tip: "가격을 물어볼 때 쓰는 표현입니다." },
+            { jp: "どうもありがとうございます", answers: ["정말 감사합니다", "대단히 감사합니다", "감사합니다"], tip: "고마움을 정중하게 표현할 때 씁니다." },
+            { jp: "いま何時ですか", answers: ["지금 몇 시예요", "지금 몇시입니까", "몇 시예요"], tip: "현재 시간을 물어보는 표현입니다." },
+            { jp: "トイレはどこですか", answers: ["화장실이 어디에 있습니까", "화장실 어디예요", "화장실이 어디입니까"], tip: "장소를 찾을 때 쓰는 필수 표현입니다." },
+            { jp: "もう一度お願いします", answers: ["다시 한 번 말씀해 주세요", "한 번 더 부탁합니다", "다시 한번 부탁해요"], tip: "상대방의 말을 다시 듣고 싶을 때 씁니다." },
+            { jp: "また明日", answers: ["내일 봐요", "내일 보자", "또 내일"], tip: "헤어질 때 가볍게 내일을 기약하는 인사입니다." },
+            { jp: "すみません、道を教えてください", answers: ["죄송합니다만 길 좀 묻겠습니다", "실례지만 길을 알려주세요", "길 좀 가르쳐 주세요"], tip: "길을 물어볼 때 쓰는 정석 표현입니다." },
+            { jp: "この近くに駅はありますか", answers: ["이 가까이에 역이 있나요", "근처에 역이 있습니까", "이 근처에 역 있어요?"], tip: "주변 시설을 찾을 때 유용한 패턴입니다." },
+            { jp: "英語が話せますか", answers: ["영어 할 수 있나요", "영어 할 수 있습니까", "영어를 말할 수 있나요"], tip: "능력을 물어볼 때 가능형을 사용합니다." },
+            { jp: "わかりません", answers: ["모르겠습니다", "모릅니다", "잘 모르겠어요"], tip: "이해하지 못했거나 모를 때 씁니다." },
+            { jp: "ゆっくり話してください", answers: ["천천히 말씀해 주세요", "천천히 말해주세요", "천천히 얘기해 주세요"], tip: "말이 너무 빠를 때 부탁하는 표현입니다." },
+            { jp: "これでお願いします", answers: ["이것으로 주세요", "이걸로 해주세요", "이것으로 부탁해요"], tip: "주문하거나 선택할 때 씁니다." },
+            { jp: "カードで払えますか", answers: ["카드로 계산할 수 있나요", "카드 결제 되나요", "카드로 낼 수 있나요"], tip: "카드 결제 여부를 묻는 표현입니다." },
+            { jp: "領収書をください", answers: ["영수증 주세요", "영수증을 주세요"], tip: "영수증을 달라고 요청할 때 씁니다." },
+            { jp: "お腹が減りました", answers: ["배고프네요", "배가 고픕니다", "배고파요"], tip: "출기가 진할 때 쓰는 표현입니다." },
+            { jp: "喉が渇きました", answers: ["목마르네요", "목이 마릅니다", "목말라요"], tip: "갈증이 날 때 씁니다." },
+            { jp: "美味しいです", answers: ["맛있어요", "맛있습니다"], tip: "음식이 입에 맞을 때 표현합니다." },
+            { jp: "お会計お願いします", answers: ["계산해주세요", "계산 부탁합니다", "계산서 주세요"], tip: "나갈 때 계산을 요청합니다." },
+            { jp: "ちょっと待ってください", answers: ["잠시만요", "조금만 기다려 주세요", "잠깐만 기다려요"], tip: "상대에게 양해를 구할 때 씁니다." },
+            { jp: "大丈夫です", answers: ["괜찮습니다", "괜찮아요"], tip: "거절하거나 안심시킬 때 씁니다." },
+            { jp: "すみません", answers: ["죄송합니다", "실례합니다", "저기요"], tip: "사과나 부름 모두에 쓰입니다." },
+            { jp: "はじめまして", answers: ["처음 뵙겠습니다"], tip: "첫인사 표현입니다." },
+            { jp: "よろしくお願いします", answers: ["잘 부탁드립니다", "잘 부탁해요"], tip: "인사 마무리 필수 표현입니다." },
+            { jp: "昨日は楽しかったです", answers: ["어제는 즐거웠습니다", "어제는 재미있었어요"], tip: "과거의 일에 대한 소감입니다." },
+            { jp: "いい天気ですね", answers: ["날씨가 좋네요", "좋은 날씨네요"], tip: "스몰토크 주제입니다." },
+            { jp: "雨が降っていますね", answers: ["비가 오네요", "비가 내리고 있네요"], tip: "날씨 표현입니다." },
+            { jp: "またあとで", answers: ["나중에 봐요", "이따 봐요"], tip: "다음에 보자는 인사입니다." },
+            { jp: "気をつけて", answers: ["조심히 가세요", "조심하세요", "조심해서 가요"], tip: "상대의 안전을 빌어줍니다." },
+            { jp: "いってらっしゃい", answers: ["잘 다녀오세요", "다녀오세요"], tip: "나가는 사람에게 건네는 인사입니다." },
+            { jp: "ただいま", answers: ["다녀왔습니다"], tip: "외출 후 돌아왔을 때의 인사입니다." },
+            { jp: "いらっしゃいませ", answers: ["환영합니다", "어서 오세요"], tip: "가게에서 손님을 맞이할 때 씁니다." },
+            { jp: "予約をしました", answers: ["예약을 했습니다", "예약했어요"], tip: "예약 완료를 알립니다." },
+            { jp: "寒いです", answers: ["추워요", "춥습니다"], tip: "추울 때 씁니다." },
+            { jp: "暑いです", answers: ["더워요", "덥습니다"], tip: "더울 때 씁니다." },
+            { jp: "疲れました", answers: ["피곤해요", "지쳤습니다", "피곤했습니다"], tip: "피곤할 때 씁니다." },
+            { jp: "おめでとうございます", answers: ["축하합니다", "축하드려요"], tip: "기쁜 일에 축하를 전합니다." },
+            { jp: "パスポートをなくしました", answers: ["여권을 잃어버렸습니다", "여권을 분실했습니다", "여권을 잃어버렸어요"], tip: "비상 상황 시 분실을 알립니다." },
+            { jp: "警察を呼んでください", answers: ["경찰을 불러주세요", "경찰을 불러요"], tip: "위급할 때 도움을 요청합니다." },
+            { jp: "頭が痛いです", answers: ["머리가 아픕니다", "머리가 아파요"], tip: "통증 부위를 말합니다." },
+            { jp: "熱があります", answers: ["열이 납니다", "열이 있어요"], tip: "증상을 설명합니다." },
+            { jp: "薬局はどこですか", answers: ["약국은 어디에 있습니까", "약국 어디예요", "약국이 어디입니까"], tip: "약국을 찾을 때 씁니다." },
+            { jp: "これは何ですか", answers: ["이것은 무엇입니까", "이게 뭐예요", "이것은 무엇인가요"], tip: "이름을 물어볼 때 씁니다." },
+            { jp: "時間がありません", answers: ["시간이 없습니다", "시간이 없어요"], tip: "시간 부족을 알립니다." },
+            { jp: "正解です", answers: ["정답입니다", "정답이에요"], tip: "맞았을 때 씁니다." },
+            { jp: "間違いです", answers: ["틀렸습니다", "틀렸어요", "잘못되었습니다"], tip: "아닐 때 씁니다." },
+            { jp: "忘れました", answers: ["잊어버렸어요", "까먹었어요", "잊었습니다"], tip: "기억이 안 날 때 씁니다." },
+            { jp: "写真を撮ってもいいですか", answers: ["사진을 찍어도 되나요", "사진 찍어도 되나요", "사진 촬영해도 되나요"], tip: "허락을 구할 때 필수 표현입니다." },
+            { jp: "Wi-Fiはありますか", answers: ["와이파이가 있나요", "와이파이 되나요", "와이파이 있어요?"], tip: "무선 인터넷을 찾을 때 씁니다." },
+            { jp: "ごちそうさまでした", answers: ["잘 먹었습니다", "맛있게 잘 먹었습니다"], tip: "식사 직후 감사 인사입니다." }
+        ];
+
+        let currentIndex = 0;
+        let correctCount = 0;
+        let totalCount = 0;
+        let isAnswered = false;
+
+        function loadNewQuestion() {
+            isAnswered = false;
+            currentIndex = Math.floor(Math.random() * sentences.length);
+            const sentenceEl = document.getElementById("japaneseSentence");
+            if (sentenceEl) {
+                sentenceEl.innerText = sentences[currentIndex].jp;
+            }
+            const inputEl = document.getElementById("userInput");
+            if (inputEl) {
+                inputEl.value = "";
+                inputEl.disabled = false;
+                inputEl.focus();
+            }
+            const submitBtn = document.getElementById("submitBtn");
+            if (submitBtn) {
+                submitBtn.style.display = "block";
+            }
+            const resultBox = document.getElementById("resultBox");
+            if (resultBox) {
+                resultBox.style.display = "none";
+            }
+        }
+
+        function checkAnswer() {
+            if (isAnswered) return;
+
+            const inputEl = document.getElementById("userInput");
+            const userText = inputEl ? inputEl.value.trim() : "";
+            
+            if (!userText) {
+                alert("답안을 입력해주세요!");
+                if (inputEl) inputEl.focus();
+                return;
+            }
+
+            totalCount++;
+            const currentData = sentences[currentIndex];
+            const cleanUserText = userText.replace(/[\s！？?.,~]/g, "").toLowerCase();
+            
+            let isCorrect = false;
+
+            for (let ans of currentData.answers) {
+                const cleanAns = ans.replace(/[\s！？?.,~]/g, "").toLowerCase();
+                if (cleanUserText === cleanAns) {
+                    isCorrect = true;
+                    break;
+                }
+            }
+
+            const resultBox = document.getElementById("resultBox");
+            const feedbackTitle = document.getElementById("feedbackTitle");
+            const feedbackContent = document.getElementById("feedbackContent");
+            const nextBtn = document.getElementById("nextBtn");
+
+            if (resultBox) resultBox.style.display = "block";
+
+            if (isCorrect) {
+                isAnswered = true;
+                correctCount++;
+                
+                if (inputEl) inputEl.disabled = true;
+                const submitBtn = document.getElementById("submitBtn");
+                if (submitBtn) submitBtn.style.display = "none";
+                if (nextBtn) nextBtn.style.display = "block";
+
+                if (feedbackTitle) feedbackTitle.innerText = "정답입니다! 🎉";
+                if (feedbackContent) feedbackContent.innerHTML = `완벽합니다! 정확한 뜻이에요.<br><small>💡 ${currentData.tip}</small>`;
+                if (resultBox) resultBox.className = "result-box correct";
+            } else {
+                if (feedbackTitle) feedbackTitle.innerText = "틀렸습니다 🥲";
+                if (feedbackContent) feedbackContent.innerHTML = `다시 시도해 보세요!<br><strong>모범 답안:</strong> ${currentData.answers[0]}<br><small>💡 ${currentData.tip}</small>`;
+                if (resultBox) resultBox.className = "result-box incorrect";
+                if (nextBtn) nextBtn.style.display = "none";
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            const statsEl = document.getElementById("stats");
+            if (statsEl) {
+                statsEl.innerText = `맞춘 문제: ${correctCount} / 시도한 문제: ${totalCount}`;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const inputEl = document.getElementById("userInput");
+            if (inputEl) {
+                inputEl.addEventListener("keypress", function(event) {
+                    if (event.key === "Enter") {
+                        if (!isAnswered) {
+                            checkAnswer();
+                        }
+                    }
+                });
+            }
+            loadNewQuestion();
+        });
+    </script>
+</body>
+</html>
