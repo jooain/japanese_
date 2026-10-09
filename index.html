@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일본어를 한국어로</title>
+    <style>
+        :root {
+            --primary-color: #e53935; /* 빨간색 테마 */
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .notice {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            text-align: center;
+            border: 1px solid #ffcdd2;
+        }
+
+        .stats {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .quiz-box {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .japanese-sentence {
+            font-size: 1.4rem;
+            font-weight: 600;
+            background-color: #fdfefe;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+            min-height: 30px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #c62828;
+        }
+
+        .next-btn {
+            background-color: #2e7d32;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn:hover {
+            background-color: #1b5e20;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .result-box.correct {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .result-box.incorrect {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>일본어를 한국어로</h1>
+        
+        <div class="notice">
+            ✨ 오류 없이 바로 실행되는 초간편 학습 퀴즈입니다!
+        </div>
+
+        <div class="stats" id="stats">맞춘 문제: 0 / 시도한 문제: 0</div>
+
+        <div class="quiz-box">
+            <span class="label">다음 일본어 문장의 한국어 뜻을 입력하세요</span>
+            <div class="japanese-sentence" id="japaneseSentence">문제를 불러오는 중...</div>
+            
+            <input type="text" id="userInput" placeholder="여기에 한국어 뜻을 입력하세요..." autofocus>
+            <button id="submitBtn" onclick="checkAnswer()">제출하기</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="feedback-title" id="feedbackTitle"></div>
+            <div id="feedbackContent"></div>
+            <button class="next-btn" id="nextBtn" onclick="loadNewQuestion()">다음 문제 풀기</button>
+        </div>
+    </div>
+
+    <script>
+        // 반말과 존댓말이 섞인 알짜배기 일상 회화 데이터베이스
+        const quizList = [
+            { jp: "お腹空いた、何か食べよう。", kr: "배고프다, 뭐 좀 먹자." },
+            { jp: "明日お時間ありますか。", kr: "내일 시간 있으신가요?" },
+            { jp: "マジで面倒くさい。", kr: "진짜 귀찮아 죽겠네." },
+            { jp: "すみませんが、道を教えていただけますか。", kr: "죄송하지만 길 좀 여쭤볼게요." },
+            { jp: "これいくらですか。", kr: "이거 얼마예요?" },
+            { jp: "また今度機会があったら会おうね！", kr: "다음에 기회 되면 또 보자!" },
+            { jp: "何かあったの？顔色悪いよ。", kr: "무슨 일 있어? 얼굴이 왜 그래?" },
+            { jp: "大丈夫です、何でもありません。", kr: "괜찮아요, 별일 아닙니다." },
+            { jp: "あとで連絡くれる？", kr: "나중에 연락 줄 수 있어?" },
+            { jp: "本当にありがとう、助かったよ。", kr: "정말 고마워, 덕분에 살았어." },
+            { jp: "雨が降るかもしれないから傘持って行って。", kr: "비가 올 것 같으니 우산 챙겨." },
+            { jp: "はじめまして、よろしくお願いします。", kr: "처음 뵙겠습니다, 잘 부탁드립니다." },
+            { jp: "すごく疲れたから先に寝るね。", kr: "너무 피곤해서 먼저 잘게." },
+            { jp: "今日の天気、本当にいいね！", kr: "오늘 날씨 정말 좋다!" },
+            { jp: "理解できなかったのですが、もう一度説明していただけますか。", kr: "이해를 못 했는데 다시 설명해 주실래요?" }
+        ];
+
+        let currentQuiz = null;
+        let correctCount = 0;
+        let totalCount = 0;
+        let isAnswered = false;
+
+        function getRandomQuiz() {
+            const index = Math.floor(Math.random() * quizList.length);
+            return quizList[index];
+        }
+
+        function loadNewQuestion() {
+            isAnswered = false;
+            currentQuiz = getRandomQuiz();
+            
+            document.getElementById("japaneseSentence").innerText = currentQuiz.jp;
+            
+            const inputEl = document.getElementById("userInput");
+            inputEl.value = "";
+            inputEl.disabled = false;
+            inputEl.focus();
+            
+            const submitBtn = document.getElementById("submitBtn");
+            submitBtn.style.display = "block";
+            submitBtn.disabled = false;
+            submitBtn.innerText = "제출하기";
+
+            document.getElementById("resultBox").style.display = "none";
+        }
+
+        function checkAnswer() {
+            if (isAnswered) return;
+
+            const inputEl = document.getElementById("userInput");
+            const userText = inputEl.value.trim();
+
+            if (!userText) {
+                alert("답안을 입력해주세요!");
+                inputEl.focus();
+                return;
+            }
+
+            totalCount++;
+            
+            // 공백이나 문장 부호를 제외하고 유연하게 비교
+            const cleanUser = userText.replace(/[\s.,?!~]/g, "").toLowerCase();
+            const cleanTarget = currentQuiz.kr.replace(/[\s.,?!~]/g, "").toLowerCase();
+
+            const resultBox = document.getElementById("resultBox");
+            const feedbackTitle = document.getElementById("feedbackTitle");
+            const feedbackContent = document.getElementById("feedbackContent");
+            const nextBtn = document.getElementById("nextBtn");
+
+            resultBox.style.display = "block";
+
+            // 의미나 핵심 키워드가 잘 통하는지 확인
+            if (cleanUser === cleanTarget || (cleanTarget.includes(cleanUser) && cleanUser.length > 1)) {
+                isAnswered = true;
+                correctCount++;
+                inputEl.disabled = true;
+                document.getElementById("submitBtn").style.display = "none";
+                nextBtn.style.display = "block";
+
+                feedbackTitle.innerText = "정답입니다! 🎉";
+                feedbackContent.innerHTML = `모범 번역: <strong>${currentQuiz.kr}</strong><br>아주 잘하셨습니다!`;
+                resultBox.className = "result-box correct";
+            } else {
+                feedbackTitle.innerText = "아쉽네요 🥲";
+                feedbackContent.innerHTML = `정답은 다음과 같습니다:<br><strong>${currentQuiz.kr}</strong>`;
+                resultBox.className = "result-box incorrect";
+                nextBtn.style.display = "none";
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById("stats").innerText = `맞춘 문제: ${correctCount} / 시도한 문제: ${totalCount}`;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            loadNewQuestion();
+            
+            document.getElementById("userInput").addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    if (!isAnswered) {
+                        checkAnswer();
+                    } else {
+                        loadNewQuestion();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
